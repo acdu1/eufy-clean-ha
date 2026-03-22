@@ -108,26 +108,6 @@ EUFY_CLEAN_C_SERIES = [
 
 EUFY_CLEAN_S_SERIES = ["T2119", "T2080"]
 
-EUFY_CLEAN_CLEANING_MODES = [
-    "Vacuum",
-    "Mop", 
-    "Vacuum and mop",
-    "Mopping after sweeping",
-]
-
-EUFY_CLEAN_WATER_LEVELS = [
-    "Low",
-    "Medium", 
-    "High",
-]
-
-EUFY_CLEAN_CLEANING_INTENSITIES = [
-    "Normal",
-    "Narrow",
-    "Quick",
-]
-
-
 class TriggerSource(int, Enum):
     UNKNOWN = 0
     APP = 1
@@ -178,9 +158,14 @@ MOP_WATER_LEVEL_NAMES = {
 # Additional DPS 154 mappings for enhanced functionality
 CLEANING_INTENSITY_NAMES = {
     0: "Normal",
-    1: "Narrow", 
+    1: "Narrow",
     2: "Quick",
 }
+
+# Derived from the enum-based dicts above to avoid duplication
+EUFY_CLEAN_CLEANING_MODES = list(CLEANING_MODE_NAMES.values())
+EUFY_CLEAN_WATER_LEVELS = list(MOP_WATER_LEVEL_NAMES.values())
+EUFY_CLEAN_CLEANING_INTENSITIES = list(CLEANING_INTENSITY_NAMES.values())
 
 CARPET_STRATEGY_NAMES = {
     0: "Auto Raise",
@@ -216,20 +201,6 @@ WORK_MODE_NAMES = {
 }
 
 
-class EUFY_CLEAN_GET_STATE(str, Enum):
-    sleeping = "stopped"
-    standby = "docked"
-    recharge = "docked"
-    running = "cleaning"
-    cleaning = "cleaning"
-    spot = "spot_cleaning"
-    completed = "docked"
-    charging = "charging"
-    sleep = "stopped"
-    go_home = "docked"
-    fault = "stopped"
-
-
 class EUFY_CLEAN_VACUUMCLEANER_STATE(str, Enum):
     STOPPED = "stopped"
     CLEANING = "cleaning"
@@ -253,55 +224,6 @@ EUFY_CLEAN_NOVEL_CLEAN_SPEED = [
     EUFY_CLEAN_CLEAN_SPEED.TURBO,
     EUFY_CLEAN_CLEAN_SPEED.MAX,
 ]
-
-EUFY_CLEAN_LEGACY_CLEAN_SPEED = [
-    EUFY_CLEAN_CLEAN_SPEED.NO_SUCTION,
-    EUFY_CLEAN_CLEAN_SPEED.BOOST_IQ,
-]
-
-
-class EUFY_CLEAN_GET_CLEAN_SPEED(str, Enum):
-    no_suction = "No Suction"
-    standard = "Standard"
-    quiet = "Quiet"
-    turbo = "Turbo"
-    boost_iq = "Boost IQ"
-    max = "Max"
-
-
-class EUFY_CLEAN_WORK_STATUS(str, Enum):
-    # Cleaning
-    RUNNING = "Running"
-    # In the dock, charging
-    CHARGING = "Charging"
-    # Not in the dock, paused
-    STAND_BY = "standby"
-    # Not in the dock - goes into this state after being paused for a while
-    SLEEPING = "Sleeping"
-    # Going home because battery is depleted
-    RECHARGE_NEEDED = "Recharge"
-    RECHARGE = "Recharge"
-    # In the dock, full charged
-    COMPLETED = "Completed"
-    STANDBY = "Standby"
-    SLEEP = "Sleep"
-    FAULT = "Fault"
-    FAST_MAPPING = "Fast Mapping"
-    CLEANING = "Cleaning"
-    REMOTE_CTRL = "Remote Ctrl"
-    GO_HOME = "Go Home"
-    CRUISIING = "Cruising"
-
-
-class EUFY_CLEAN_WORK_MODE(str, Enum):
-    AUTO = "auto"
-    NO_SWEEP = "Nosweep"
-    SMALL_ROOM = "SmallRoom"
-    ROOM = "room"
-    ZONE = "zone"
-    EDGE = "Edge"
-    SPOT = "Spot"
-
 
 class EUFY_CLEAN_CONTROL(int, Enum):
     START_AUTO_CLEAN = 0

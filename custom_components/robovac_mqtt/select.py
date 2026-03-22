@@ -255,6 +255,7 @@ class SceneSelectEntity(CoordinatorEntity[EufyCleanCoordinator], SelectEntity):
     def current_option(self) -> str | None:
         """Return the currently active scene."""
         current_id = self.coordinator.data.current_scene_id
+        # Check by ID first if we have a scene running
         if current_id > 0:
             # Try to match by ID in the list to return the name from the list
             # This ensures we return a valid option even if the name format varies slightly

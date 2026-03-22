@@ -202,6 +202,16 @@ Full model mapping in `const.py:EUFY_CLEAN_DEVICES`.
 
 **`EUFY_CLEAN_APP_TRIGGER_MODES`** - Mode IDs (1-9) that imply app as trigger source when `WorkStatus.trigger` is missing.
 
+## Code Quality Rules
+
+### No duplication
+This codebase must stay maintainable by humans. Be strict about duplication:
+
+- **Constants**: Every concept (fan speeds, work modes, cleaning modes, etc.) must have exactly one canonical definition. Derive lists from dicts, not the other way around. Never add a new enum or list that restates values already defined elsewhere — reference the existing source instead.
+- **Tests**: Each scenario must be tested in exactly one place. Name test files by the module they cover (e.g., `test_parser.py`, `test_select.py`). Do not create "integration" or "alignment" test files that re-test the same entity behavior already covered in unit tests.
+- **State mappings**: Protobuf value → human string mappings live in `const.py` dicts (e.g., `CLEANING_MODE_NAMES`). Parser functions in `api/parser.py` consume these dicts. Do not duplicate the mapping logic inline.
+- **Dead code**: Remove unused constants, enums, and imports immediately. Do not keep them "for reference" — git history serves that purpose.
+
 ## Development Notes
 
 - **Test suite** in `tests/` with ~20 test files (pytest + asyncio) covering entities, parser, coordinator, and config flow
