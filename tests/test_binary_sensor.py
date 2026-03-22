@@ -45,3 +45,20 @@ def test_charging_sensor(mock_coordinator):
     # Update state
     mock_coordinator.data.charging = False
     assert entity.is_on is False
+
+
+def test_charging_sensor_default_false(mock_coordinator):
+    """Test charging sensor returns False before any data received."""
+    # VacuumState defaults charging=False
+    assert mock_coordinator.data.charging is False
+
+    entity = RoboVacBinarySensor(
+        mock_coordinator,
+        "charging",
+        "Charging",
+        lambda s: s.charging,
+        device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
+    )
+    entity.hass = MagicMock()
+
+    assert entity.is_on is False

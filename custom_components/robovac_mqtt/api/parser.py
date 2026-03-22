@@ -201,6 +201,8 @@ def _process_work_status(
                 # 0=ADDING, 1=EMPTYING
                 if st.water_injection_system.state == 0:
                     changes["dock_status"] = "Adding clean water"
+                else:
+                    changes["dock_status"] = "Recycling waste water"
 
             # Reset to Idle if station field is present but no activity
             if not has_dock_activity:
@@ -402,8 +404,10 @@ def _map_work_status(status: WorkStatus) -> str:
         return "cleaning"
     if s == 7:  # Go Home
         return "returning"
-    if s == 8:  # Active clean (alternate)
+    if s == 8:  # Active clean (alternate / cruising)
         return "cleaning"
+    if s == 15:  # Paused
+        return "paused"
 
     return "idle"
 
@@ -607,6 +611,8 @@ def _process_cleaning_parameters(
             clean_param = response.clean_param
         elif response and response.HasField("running_clean_param"):
             clean_param = response.running_clean_param
+        elif response and response.HasField("area_clean_param"):
+            clean_param = response.area_clean_param
     except Exception as e:
         _LOGGER.debug("Failed to decode CleanParamResponse from DPS 154: %s", e)
 
@@ -615,6 +621,8 @@ def _process_cleaning_parameters(
             request = decode(CleanParamRequest, value, has_length=True)
             if request and request.HasField("clean_param"):
                 clean_param = request.clean_param
+            elif request and request.HasField("area_clean_param"):
+                clean_param = request.area_clean_param
         except Exception as e:
             _LOGGER.debug("Failed to decode CleanParamRequest from DPS 154: %s", e)
 

@@ -129,10 +129,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         data = hass.data[DOMAIN].get(entry.entry_id)
         if data and "coordinators" in data:
             for coordinator in data["coordinators"]:
-                # Disconnect client
+                coordinator.async_shutdown_timers()
                 if coordinator.client:
                     await coordinator.client.disconnect()
-                    # Need to ensure disconnect exists or implement it
 
         hass.data[DOMAIN].pop(entry.entry_id)
 

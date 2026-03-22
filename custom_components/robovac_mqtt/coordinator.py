@@ -198,10 +198,21 @@ class EufyCleanCoordinator(DataUpdateCoordinator[VacuumState]):
             self.hass, f"{DOMAIN}_{self.device_id}_rooms_updated"
         )
 
+    def async_shutdown_timers(self) -> None:
+        """Cancel active debounce timers (call before teardown)."""
+        if self._dock_idle_cancel:
+            self._dock_idle_cancel()
+            self._dock_idle_cancel = None
+        if self._segment_update_cancel:
+            self._segment_update_cancel()
+            self._segment_update_cancel = None
+
     async def async_send_command(self, command_dict: dict[str, Any]) -> None:
         """Send command to device."""
         if self.client:
             await self.client.send_command(command_dict)
+        else:
+            _LOGGER.warning("Cannot send command: no MQTT client available")
 
     async def _async_update_data(self) -> VacuumState:
         """Fetch data from API endpoint.

@@ -570,3 +570,19 @@ def test_deduplicate_room_names_no_duplicates():
     ]
     result = _deduplicate_room_names(rooms)
     assert result == rooms
+
+
+# ── Additional Edge Case Tests ─────────────────────────────────────────
+
+
+def test_map_work_status_state_15_paused():
+    """Test WorkStatus state 15 maps to paused."""
+    ws = _make_work_status(15)
+    assert _map_work_status(ws) == "paused"
+
+
+def test_build_command_unknown_returns_empty():
+    """Test build_command with unknown command returns empty dict."""
+    from custom_components.robovac_mqtt.api.commands import build_command
+
+    assert build_command("nonexistent_command") == {}

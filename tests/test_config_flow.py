@@ -47,3 +47,25 @@ async def test_duplicate_entry(hass: HomeAssistant, mock_login_fixture):
     # Expectation: ABORT (already configured)
     assert result4["type"] == data_entry_flow.FlowResultType.ABORT
     assert result4["reason"] == "already_configured"
+
+
+async def test_config_flow_entry_data_contains_vacs(
+    hass: HomeAssistant, mock_login_fixture
+):
+    """Test that created config entry data includes VACS key."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
+
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_USERNAME: "newuser@example.com", CONF_PASSWORD: "pass123"},
+    )
+    assert result2["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
+
+    # Verify the entry data includes the VACS key
+    entry_data = result2["result"].data
+    assert CONF_USERNAME in entry_data
+    assert CONF_PASSWORD in entry_data
+    assert "vacs" in entry_data

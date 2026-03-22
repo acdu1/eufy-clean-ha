@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 from base64 import b64decode, b64encode
 from typing import Any, TypeVar
 
 from google.protobuf.message import Message
-
-
-async def sleep(ms: int):
-    await asyncio.sleep(ms / 1000)
 
 
 # This code comes from here: https://github.com/CodeFoodPixels/robovac/issues/68#issuecomment-2119573501  # noqa: E501
@@ -21,9 +16,13 @@ def decode(to_type: type[T], b64_data: str, has_length: bool = True) -> T:
 
     if has_length:
         # Skip varint length prefix
+        if not data:
+            raise ValueError("Cannot decode empty data")
         pos = 0
-        while data[pos] & 0x80:
+        while pos < len(data) and data[pos] & 0x80:
             pos += 1
+        if pos >= len(data):
+            raise ValueError("Truncated varint in data")
         pos += 1
         data = data[pos:]
 
@@ -39,6 +38,8 @@ def encode(
 
 def encode_varint(n: int) -> bytes:
     """Encode an integer as a protobuf varint."""
+    if n < 0:
+        raise ValueError(f"Cannot encode negative varint: {n}")
     out = bytearray()
     while n >= 0x80:
         out.append((n & 0x7F) | 0x80)

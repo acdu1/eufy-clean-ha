@@ -8,6 +8,7 @@ import tempfile
 import time
 from collections.abc import Callable
 from functools import partial
+import os
 from os import unlink
 from typing import Any
 
@@ -43,6 +44,7 @@ def get_blocking_mqtt_client(
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".key") as key_file:
         key_file.write(private_key)
         key_path = key_file.name
+    os.chmod(key_path, 0o600)
 
     client.tls_set(
         certfile=ca_path,
@@ -187,7 +189,8 @@ class EufyCleanClient:
         if self._mqtt_client:
             _LOGGER.debug("Disconnecting MQTT client...")
             self._mqtt_client.loop_stop()
-            await self._loop.run_in_executor(None, self._mqtt_client.disconnect)
+            loop = self._loop or asyncio.get_running_loop()
+            await loop.run_in_executor(None, self._mqtt_client.disconnect)
             self._mqtt_client = None
 
         # Clean up temporary certificate files
@@ -210,10 +213,10 @@ class EufyCleanClient:
     def _on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             _LOGGER.info("Connected to MQTT Broker!")
-            self._connected_event.set()
+            if self._loop:
+                self._loop.call_soon_threadsafe(self._connected_event.set)
             # Subscribe
             if self.device_id:
-                # Standard topic: cmd/eufy_home/{model}/{sn}/res
                 topic = f"cmd/eufy_home/{self.device_model}/{self.device_id}/res"
                 _LOGGER.debug("Subscribing to %s", topic)
                 client.subscribe(topic)
@@ -222,7 +225,8 @@ class EufyCleanClient:
 
     def _on_disconnect(self, client, userdata, rc):
         _LOGGER.warning("Disconnected from MQTT broker, rc=%d", rc)
-        self._connected_event.clear()
+        if self._loop:
+            self._loop.call_soon_threadsafe(self._connected_event.clear)
 
     def _on_message(self, client, userdata, msg):
         """Handle incoming MQTT messages."""

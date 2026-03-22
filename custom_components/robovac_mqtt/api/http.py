@@ -6,6 +6,8 @@ from typing import Any
 
 import aiohttp
 
+_REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=30)
+
 from ..const import (
     EUFY_API_DEVICE_LIST,
     EUFY_API_DEVICE_V2,
@@ -42,7 +44,7 @@ class EufyHTTPClient:
 
     async def eufy_login(self) -> dict[str, Any] | None:
         """Login to Eufy Cloud."""
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=_REQUEST_TIMEOUT) as session:
             async with session.post(
                 EUFY_API_LOGIN,
                 headers={
@@ -61,16 +63,19 @@ class EufyHTTPClient:
                     "client_secret": "GQCpr9dSp3uQpsOMgJ4xQ",
                 },
             ) as response:
-                if response.status == 200:
+                response_json = None
+                try:
                     response_json = await response.json()
+                except Exception:
+                    pass
+
+                if response.status == 200 and response_json:
                     if response_json.get("access_token"):
                         _LOGGER.debug("eufyLogin successful")
                         self.session = response_json
                         return response_json
-                try:
-                    body = await response.json()
-                except Exception:
-                    body = await response.text()
+
+                body = response_json or await response.text()
                 _LOGGER.error("Login failed: %s %s", response.status, body)
                 return None
 
@@ -79,7 +84,7 @@ class EufyHTTPClient:
         if not self.session:
             return None
 
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=_REQUEST_TIMEOUT) as session:
             async with session.get(
                 EUFY_API_USER_INFO,
                 headers={
@@ -110,7 +115,11 @@ class EufyHTTPClient:
 
     async def get_device_list(self) -> list[dict[str, Any]]:
         """Get list of devices."""
-        async with aiohttp.ClientSession() as session:
+        if not self.user_info:
+            _LOGGER.error("Cannot get device list: user_info is None")
+            return []
+
+        async with aiohttp.ClientSession(timeout=_REQUEST_TIMEOUT) as session:
             async with session.post(
                 EUFY_API_DEVICE_LIST,
                 headers={
@@ -135,7 +144,11 @@ class EufyHTTPClient:
 
     async def get_cloud_device_list(self) -> list[dict[str, Any]]:
         """Get cloud device list (V2)."""
-        async with aiohttp.ClientSession() as session:
+        if not self.session:
+            _LOGGER.error("Cannot get cloud device list: no session")
+            return []
+
+        async with aiohttp.ClientSession(timeout=_REQUEST_TIMEOUT) as session:
             async with session.get(
                 EUFY_API_DEVICE_V2,
                 headers={
@@ -154,7 +167,11 @@ class EufyHTTPClient:
 
     async def get_mqtt_credentials(self) -> dict[str, Any] | None:
         """Get MQTT credentials."""
-        async with aiohttp.ClientSession() as session:
+        if not self.user_info:
+            _LOGGER.error("Cannot get MQTT credentials: user_info is None")
+            return None
+
+        async with aiohttp.ClientSession(timeout=_REQUEST_TIMEOUT) as session:
             async with session.post(
                 EUFY_API_MQTT_INFO,
                 headers={

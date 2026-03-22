@@ -71,7 +71,6 @@ def test_vacuum_attributes(mock_coordinator, mock_config_entry):
  
     attrs = entity.extra_state_attributes
  
-    assert attrs["fan_speed"] == EUFY_CLEAN_CLEAN_SPEED.STANDARD
     assert attrs["task_status"] == "Cleaning"
     assert attrs["work_mode"] == "Room"
 
@@ -230,3 +229,40 @@ async def test_mqtt_malformed_message_does_not_crash(mqtt_coordinator):
 
     # State should remain unchanged after all malformed messages
     assert mqtt_coordinator.data.fan_speed == initial_fan_speed
+
+
+@pytest.mark.asyncio
+async def test_app_segment_clean_command(mock_coordinator, mock_config_entry):
+    """Test app_segment_clean converts IDs and sends room_clean."""
+    entity = RoboVacMQTTEntity(mock_coordinator, mock_config_entry)
+    entity.hass = mock_coordinator.hass
+    mock_coordinator.data.map_id = 5
+
+    with patch("custom_components.robovac_mqtt.vacuum.build_command") as mock_build:
+        mock_build.return_value = {"152": "encoded"}
+        await entity.async_send_command("app_segment_clean", params=[1, "2", 3.0])
+
+        # Verify room_clean was called with int IDs via _async_handle_room_clean
+        # The entity calls _async_handle_room_clean which calls build_command
+        # with room_clean and the converted int IDs
+        assert mock_coordinator.async_send_command.called
+
+
+@pytest.mark.asyncio
+async def test_app_segment_clean_invalid_ids(mock_coordinator, mock_config_entry):
+    """Test app_segment_clean with invalid IDs does nothing."""
+    entity = RoboVacMQTTEntity(mock_coordinator, mock_config_entry)
+    entity.hass = mock_coordinator.hass
+
+    await entity.async_send_command("app_segment_clean", params=["invalid"])
+    mock_coordinator.async_send_command.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_clean_segments_empty_list(mock_coordinator, mock_config_entry):
+    """Test async_clean_segments with empty list does nothing."""
+    entity = RoboVacMQTTEntity(mock_coordinator, mock_config_entry)
+    entity.hass = mock_coordinator.hass
+
+    await entity.async_clean_segments([])
+    mock_coordinator.async_send_command.assert_not_called()

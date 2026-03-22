@@ -152,3 +152,59 @@ async def test_async_send_command(mock_hass, mock_login):
     await coordinator.async_send_command(cmd)
 
     mock_client.send_command.assert_called_with(cmd)
+
+
+def test_async_shutdown_timers_cancels_both(mock_hass, mock_login):
+    """Test that async_shutdown_timers cancels dock and segment timers."""
+    device_info = {
+        "deviceId": "test_id",
+        "deviceModel": "T2118",
+        "deviceName": "Test Vac",
+    }
+    coordinator = EufyCleanCoordinator(mock_hass, mock_login, device_info)
+
+    mock_dock_cancel = MagicMock()
+    mock_segment_cancel = MagicMock()
+    coordinator._dock_idle_cancel = mock_dock_cancel
+    coordinator._segment_update_cancel = mock_segment_cancel
+
+    coordinator.async_shutdown_timers()
+
+    mock_dock_cancel.assert_called_once()
+    mock_segment_cancel.assert_called_once()
+    assert coordinator._dock_idle_cancel is None
+    assert coordinator._segment_update_cancel is None
+
+
+def test_async_shutdown_timers_noop_when_no_timers(mock_hass, mock_login):
+    """Test async_shutdown_timers is safe with no active timers."""
+    device_info = {
+        "deviceId": "test_id",
+        "deviceModel": "T2118",
+        "deviceName": "Test Vac",
+    }
+    coordinator = EufyCleanCoordinator(mock_hass, mock_login, device_info)
+
+    assert coordinator._dock_idle_cancel is None
+    assert coordinator._segment_update_cancel is None
+
+    # Should not raise
+    coordinator.async_shutdown_timers()
+
+    assert coordinator._dock_idle_cancel is None
+    assert coordinator._segment_update_cancel is None
+
+
+@pytest.mark.asyncio
+async def test_async_send_command_no_client_logs_warning(mock_hass, mock_login):
+    """Test that sending command with no client logs warning."""
+    device_info = {
+        "deviceId": "test_id",
+        "deviceModel": "T2118",
+        "deviceName": "Test Vac",
+    }
+    coordinator = EufyCleanCoordinator(mock_hass, mock_login, device_info)
+    coordinator.client = None
+
+    # Should not raise any exception
+    await coordinator.async_send_command({"some": "cmd"})
