@@ -378,15 +378,15 @@ def _map_task_status(status: WorkStatus, dock_status: str | None = None) -> str:
 def _map_work_status(status: WorkStatus) -> str:
     """Map WorkStatus protobuf to activity string."""
     s = status.state
-    if s in (0, 1):
+    if s in (0, 1):  # 0=Standby, 1=Sleep
         return "idle"
-    if s == 2:
+    if s == 2:  # Fault
         return "error"
-    if s == 3:
+    if s == 3:  # Charging
         return "docked"
-    if s == 4:
+    if s == 4:  # Positioning
         return "cleaning"
-    if s == 5:
+    if s == 5:  # Active clean / station wash+dry
         # go_wash.mode: 0=NAVIGATION, 1=WASHING, 2=DRYING
         # When washing or drying (modes 1, 2), the vacuum is physically docked at the station
         # Users expect "docked" status during station-based activities, not "cleaning"
@@ -397,11 +397,11 @@ def _map_work_status(status: WorkStatus) -> str:
         if status.HasField("station") and status.station.HasField("washing_drying_system"):
             return "docked"
         return "cleaning"
-    if s == 6:
+    if s == 6:  # Active clean (alternate)
         return "cleaning"
-    if s == 7:
+    if s == 7:  # Go Home
         return "returning"
-    if s == 8:
+    if s == 8:  # Active clean (alternate)
         return "cleaning"
 
     return "idle"
