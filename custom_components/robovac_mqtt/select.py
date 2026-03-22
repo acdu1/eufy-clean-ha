@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import replace
 import logging
 from collections.abc import Callable
@@ -245,15 +246,18 @@ class DockSelectEntity(CoordinatorEntity[EufyCleanCoordinator], SelectEntity):
             _LOGGER.debug("Error getting select option for %s: %s", self.name, e)
             return None
 
+    @property
+    def available(self) -> bool:
+        """Return whether the entity is available."""
+        return super().available and bool(self.coordinator.data.dock_auto_cfg)
+
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
-        cfg = self.coordinator.data.dock_auto_cfg.copy()
+        cfg = copy.deepcopy(self.coordinator.data.dock_auto_cfg)
         self._setter(cfg, option)
 
         command = build_command("set_auto_cfg", cfg=cfg)
         await self.coordinator.async_send_command(command)
-
-        self.async_write_ha_state()
 
 
 class SceneSelectEntity(CoordinatorEntity[EufyCleanCoordinator], SelectEntity):
@@ -526,7 +530,7 @@ class MopIntensitySelectEntity(_StateBackedSelectEntity):
 
     def _state_to_option(self, value: str | None) -> str | None:
         """Map the device water level to the Matter-facing intensity option."""
-        return _WATER_LEVEL_TO_MOP_INTENSITY.get(value, value)
+        return _WATER_LEVEL_TO_MOP_INTENSITY.get(value)
 
     def _option_to_state(self, option: str) -> str:
         """Map the Matter-facing intensity option to the device water level."""

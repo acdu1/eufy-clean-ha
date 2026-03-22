@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import logging
 from collections.abc import Callable
 from typing import Any
@@ -75,17 +76,9 @@ def set_collect_dust(cfg: dict[str, Any], val: bool) -> None:
 def set_wash_cfg(cfg: dict[str, Any], val: bool) -> None:
     """Helper to set wash state in config dict."""
     if "wash" not in cfg:
-        cfg["wash"] = {"cfg": 1 if val else 0}
+        cfg["wash"] = {"cfg": "STANDARD" if val else "CLOSE"}
     else:
-        cfg["wash"]["cfg"] = 1 if val else 0
-
-
-def set_dry_cfg(cfg: dict[str, Any], val: bool) -> None:
-    """Helper to set dry state in config dict."""
-    if "dry" not in cfg:
-        cfg["dry"] = {"cfg": 1 if val else 0}
-    else:
-        cfg["dry"]["cfg"] = 1 if val else 0
+        cfg["wash"]["cfg"] = "STANDARD" if val else "CLOSE"
 
 
 class DockSwitchEntity(CoordinatorEntity[EufyCleanCoordinator], SwitchEntity):
@@ -134,15 +127,18 @@ class DockSwitchEntity(CoordinatorEntity[EufyCleanCoordinator], SwitchEntity):
         """Turn the switch off."""
         await self._set_state(False)
 
+    @property
+    def available(self) -> bool:
+        """Return whether the entity is available."""
+        return super().available and bool(self.coordinator.data.dock_auto_cfg)
+
     async def _set_state(self, state: bool) -> None:
         """Send command to update config."""
-        cfg = self.coordinator.data.dock_auto_cfg.copy()
+        cfg = copy.deepcopy(self.coordinator.data.dock_auto_cfg)
         self._setter(cfg, state)
 
         command = build_command("set_auto_cfg", cfg=cfg)
         await self.coordinator.async_send_command(command)
-
-        self.async_write_ha_state()
 
 
 class FindRobotSwitchEntity(CoordinatorEntity[EufyCleanCoordinator], SwitchEntity):

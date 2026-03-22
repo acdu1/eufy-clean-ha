@@ -274,7 +274,7 @@ def test_mop_intensity_select_entity_mapping(mock_coordinator):
     assert entity._state_to_option("Low") == "Quiet"
     assert entity._state_to_option("Medium") == "Automatic"
     assert entity._state_to_option("High") == "Max"
-    assert entity._state_to_option("Unknown") == "Unknown"  # fallback
+    assert entity._state_to_option("Unknown") is None  # unmapped values return None
 
 
 @pytest.mark.asyncio
@@ -297,3 +297,49 @@ async def test_mop_intensity_select_entity_async(mock_coordinator):
         mock_coordinator.async_send_command.assert_called_with(
             {"cmd": "water_level_cmd"}
         )
+
+
+@pytest.mark.asyncio
+async def test_dock_select_deepcopy_no_mutation(mock_coordinator):
+    """Test that async_select_option does not mutate coordinator.data.dock_auto_cfg."""
+    original_cfg = {
+        "wash": {"wash_freq": {"mode": "ByPartition"}}
+    }
+    mock_coordinator.data.dock_auto_cfg = original_cfg
+
+    def getter(cfg):
+        return "ByRoom" if cfg.get("wash", {}).get("wash_freq", {}).get("mode") == "ByPartition" else "ByTime"
+
+    def setter(cfg, val):
+        if "wash" not in cfg:
+            cfg["wash"] = {}
+        if "wash_freq" not in cfg["wash"]:
+            cfg["wash"]["wash_freq"] = {}
+        cfg["wash"]["wash_freq"]["mode"] = "ByPartition" if val == "ByRoom" else "ByTime"
+
+    entity = DockSelectEntity(
+        mock_coordinator, "wash_frequency_mode", "Wash Frequency Mode",
+        ["ByRoom", "ByTime"], getter, setter,
+    )
+    entity.hass = MagicMock()
+    entity.async_write_ha_state = MagicMock()
+
+    with patch("custom_components.robovac_mqtt.select.build_command") as mock_build:
+        mock_build.return_value = {"cmd": "val"}
+        await entity.async_select_option("ByTime")
+
+    # Original config should be unchanged (deepcopy prevents mutation)
+    assert original_cfg["wash"]["wash_freq"]["mode"] == "ByPartition"
+
+
+def test_dock_select_unavailable_no_cfg(mock_coordinator):
+    """Test dock select is unavailable when dock_auto_cfg is empty."""
+    mock_coordinator.data.dock_auto_cfg = {}
+    mock_coordinator.last_update_success = True
+
+    entity = DockSelectEntity(
+        mock_coordinator, "test_select", "Test Select",
+        ["A", "B"], lambda cfg: "A", lambda cfg, val: None,
+    )
+
+    assert entity.available is False

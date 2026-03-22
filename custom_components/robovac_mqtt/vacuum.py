@@ -362,7 +362,6 @@ class RoboVacMQTTEntity(CoordinatorEntity[EufyCleanCoordinator], StateVacuumEnti
         rooms = self._get_extra_room_attributes()
         segments = self._get_extra_segment_attributes()
         return {
-            "fan_speed": data.fan_speed,
             "cleaning_time": data.cleaning_time,
             "cleaning_area": data.cleaning_area,
             "task_status": data.task_status,

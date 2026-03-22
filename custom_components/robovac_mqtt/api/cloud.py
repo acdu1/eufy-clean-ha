@@ -19,7 +19,6 @@ class EufyLogin:
         self.username = username
         self.password = password
         self.openudid = openudid
-        self.sid = None
         self.mqtt_credentials: dict[str, Any] | None = None
         self.mqtt_devices: list[dict[str, Any]] = []
         self.eufy_api_devices: list[dict[str, Any]] = []
@@ -42,7 +41,7 @@ class EufyLogin:
         self.mqtt_credentials = eufyLogin["mqtt"]
 
     async def checkLogin(self):
-        if not self.sid:
+        if not self.mqtt_credentials:
             await self.login({"mqtt": True})
 
     async def getDevices(self) -> None:

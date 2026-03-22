@@ -46,7 +46,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if not errors:
             data = user_input.copy()
             data[VACS] = {}
-            return self.async_create_entry(title=username, data=user_input)
+            return self.async_create_entry(title=username, data=data)
 
         return self.async_show_form(
             step_id="user", data_schema=USER_SCHEMA, errors=errors

@@ -136,3 +136,56 @@ async def test_dock_switches(hass: HomeAssistant, mock_coordinator):
     # Test Turn Off
     await auto_wash.async_turn_off()
     mock_coordinator.async_send_command.assert_called()
+
+
+def test_set_wash_cfg_writes_string_values():
+    """Test set_wash_cfg writes STANDARD/CLOSE strings, not integers."""
+    cfg = {}
+    set_wash_cfg(cfg, True)
+    assert cfg["wash"]["cfg"] == "STANDARD"
+    set_wash_cfg(cfg, False)
+    assert cfg["wash"]["cfg"] == "CLOSE"
+
+
+async def test_dock_switch_deepcopy_no_mutation(hass: HomeAssistant, mock_coordinator):
+    """Test that _set_state does not mutate coordinator.data.dock_auto_cfg."""
+    entry = MockConfigEntry(domain=DOMAIN, data={})
+    entry.add_to_hass(hass)
+
+    original_cfg = {
+        "collectdust_v2": {"sw": {"value": False}},
+        "wash": {"cfg": "CLOSE"},
+    }
+    mock_coordinator.data.dock_auto_cfg = original_cfg
+
+    entity = DockSwitchEntity(
+        mock_coordinator,
+        "auto_empty",
+        "Auto Empty",
+        lambda cfg: cfg.get("collectdust_v2", {}).get("sw", {}).get("value", False),
+        set_collect_dust,
+        icon="mdi:delete-restore",
+    )
+    entity.hass = hass
+
+    await entity.async_turn_on()
+
+    # Original config should be unchanged (deepcopy prevents mutation)
+    assert original_cfg["collectdust_v2"]["sw"]["value"] is False
+
+
+def test_dock_switch_unavailable_no_cfg(mock_coordinator):
+    """Test dock switch is unavailable when no dock_auto_cfg."""
+    mock_coordinator.data.dock_auto_cfg = {}
+    mock_coordinator.last_update_success = True
+
+    entity = DockSwitchEntity(
+        mock_coordinator,
+        "auto_empty",
+        "Auto Empty",
+        lambda cfg: cfg.get("collectdust_v2", {}).get("sw", {}).get("value", False),
+        set_collect_dust,
+        icon="mdi:delete-restore",
+    )
+
+    assert entity.available is False
