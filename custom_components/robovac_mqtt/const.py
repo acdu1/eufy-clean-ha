@@ -181,10 +181,10 @@ CORNER_CLEANING_NAMES = {
 
 FAN_SUCTION_NAMES = {
     0: "Quiet",
-    1: "Standard", 
+    1: "Standard",
     2: "Turbo",
     3: "Max",
-    4: "Boost IQ",
+    4: "Boost_IQ",
 }
 
 
@@ -463,14 +463,13 @@ EUFY_CLEAN_ERROR_CODES = {
 # Mapping for Custom Room Parameters
 
 CLEAN_TYPE_MAP = {
-    # Keys are normalized to lowercase; underscores accepted as space aliases.
+    # Keys are normalized to lowercase with spaces (underscores converted to spaces
+    # by _normalize_clean_mode in commands.py).
     "vacuum": CleanType.SWEEP_ONLY,
     "mop": CleanType.MOP_ONLY,
-    "vacuum_mop": CleanType.SWEEP_AND_MOP,
+    "vacuum mop": CleanType.SWEEP_AND_MOP,
     "vacuum and mop": CleanType.SWEEP_AND_MOP,
-    "vacuum_and_mop": CleanType.SWEEP_AND_MOP,
-    "sweep_and_mop": CleanType.SWEEP_AND_MOP,
-    "mopping_after_sweeping": CleanType.SWEEP_THEN_MOP,
+    "sweep and mop": CleanType.SWEEP_AND_MOP,
     "mopping after sweeping": CleanType.SWEEP_THEN_MOP,
 }
 

@@ -299,7 +299,9 @@ class BatterySensorEntity(CoordinatorEntity[EufyCleanCoordinator], SensorEntity)
 
     @property
     def native_value(self) -> int | None:
-        """Return the battery level, or None if invalid."""
+        """Return the battery level, or None if not yet received."""
+        if "battery_level" not in self.coordinator.data.received_fields:
+            return None
         battery = self.coordinator.data.battery_level
         if battery is None or battery < 0:
             return None

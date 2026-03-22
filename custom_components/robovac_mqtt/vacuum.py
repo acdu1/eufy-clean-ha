@@ -79,8 +79,6 @@ def _segment_name_map(segments: list[Segment]) -> dict[str, str]:
 
 _LOGGER = logging.getLogger(__name__)
 
-_LAST_SEEN_SEGMENTS_KEY = "last_seen_segments"
-
 # CLEAN_AREA was added in HA 2026.3; fall back gracefully on older installs
 _CLEAN_AREA_FEATURE = getattr(VacuumEntityFeature, "CLEAN_AREA", None)
 
@@ -194,7 +192,12 @@ class RoboVacMQTTEntity(CoordinatorEntity[EufyCleanCoordinator], StateVacuumEnti
         return self._config_entry is not None
 
     def _get_room_clean_defaults(self) -> dict[str, Any]:
-        """Return default room-clean parameters derived from coordinator state."""
+        """Return default room-clean parameters derived from coordinator state.
+
+        "Standard" fan speed and "Vacuum" cleaning mode are intentionally omitted
+        because they represent the device's factory defaults — sending them would
+        needlessly force CUSTOMIZE mode when GENERAL mode produces the same result.
+        """
         defaults: dict[str, Any] = {}
 
         if self.coordinator.data.fan_speed and self.coordinator.data.fan_speed != "Standard":
@@ -296,7 +299,7 @@ class RoboVacMQTTEntity(CoordinatorEntity[EufyCleanCoordinator], StateVacuumEnti
         edge_mopping = merged_params.get("edge_mopping")
         
         has_explicit_custom = (
-            any([fan_speed, water_level, clean_times, clean_mode, clean_intensity])
+            any(v is not None for v in [fan_speed, water_level, clean_times, clean_mode, clean_intensity])
             or edge_mopping is not None
         )
         
@@ -523,6 +526,9 @@ class RoboVacMQTTEntity(CoordinatorEntity[EufyCleanCoordinator], StateVacuumEnti
     def _store_last_seen_segments(self, segments: list[Segment]) -> None:
         """Store the current segments as last seen and clear any existing issue."""
         serialized_segments = _serialize_segments(segments)
+        # Fire-and-forget: storage errors are logged by HA's task runner.
+        # The race window for rapid segment updates is small (debounced by 2s
+        # in the coordinator) and acceptable for this non-critical persistence.
         self.coordinator.hass.async_create_task(
             self.coordinator.async_save_segments(serialized_segments)
         )

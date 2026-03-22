@@ -183,7 +183,7 @@ async def test_room_select_entity(mock_coordinator):
         await entity.async_select_option("Kitchen")
 
         mock_build.assert_called_with(
-            "room_clean", room_ids=[10], map_id=5, mode="CUSTOMIZE"
+            "room_clean", room_ids=[10], map_id=5
         )
         mock_coordinator.async_send_command.assert_called_with({"cmd": "room_cmd"})
 

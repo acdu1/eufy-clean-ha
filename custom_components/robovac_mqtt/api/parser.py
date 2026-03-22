@@ -23,11 +23,8 @@ from ..const import (
 )
 from ..models import AccessoryState, VacuumState
 from ..proto.cloud.clean_param_pb2 import (
-    CleanExtent,
     CleanParamRequest,
     CleanParamResponse,
-    CleanType,
-    MopMode,
 )
 from ..proto.cloud.clean_statistics_pb2 import CleanStatistics
 from ..proto.cloud.consumable_pb2 import ConsumableResponse
@@ -252,6 +249,7 @@ def _process_other_dps(
         try:
             if key == DPS_MAP["BATTERY_LEVEL"]:
                 changes["battery_level"] = int(value)
+                _track_field(state, changes, "battery_level")
 
             elif key == DPS_MAP["CLEAN_SPEED"]:
                 changes["fan_speed"] = _map_clean_speed(value)
@@ -670,7 +668,7 @@ def _process_cleaning_parameters(
 
     # Extract Smart Mode Switch
     if clean_param.HasField("smart_mode_sw"):
-        changes["smart_mode"] = bool(clean_param.smart_mode_sw)
+        changes["smart_mode"] = clean_param.smart_mode_sw.value
         _track_field(state, changes, "smart_mode")
         _LOGGER.debug("DPS 154: Extracted smart mode %s", changes["smart_mode"])
 

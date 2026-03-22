@@ -88,8 +88,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {"coordinators": coordinators}
 
-    # Clean up migrated data from config entry
-    if "last_seen_segments" in entry.data:
+    # Clean up migrated data from config entry (skip for multi-device to avoid
+    # deleting data that was intentionally not migrated)
+    if "last_seen_segments" in entry.data and not is_multi_device:
         new_data = dict(entry.data)
         new_data.pop("last_seen_segments")
         hass.config_entries.async_update_entry(entry, data=new_data)

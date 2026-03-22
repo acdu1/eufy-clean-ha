@@ -25,6 +25,31 @@ from .coordinator import EufyCleanCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+
+def _deduplicate_names(names: list[str]) -> list[str]:
+    """Ensure option names are unique by appending a suffix to duplicates.
+
+    e.g. ["Kitchen", "Kitchen", "Bedroom"] -> ["Kitchen", "Kitchen (2)", "Bedroom"].
+    """
+    counts: dict[str, int] = {}
+    for name in names:
+        counts[name] = counts.get(name, 0) + 1
+
+    duplicated = {n for n, c in counts.items() if c > 1}
+    if not duplicated:
+        return names
+
+    seen: dict[str, int] = {}
+    result: list[str] = []
+    for name in names:
+        if name in duplicated:
+            seen[name] = seen.get(name, 0) + 1
+            result.append(f"{name} ({seen[name]})" if seen[name] > 1 else name)
+        else:
+            result.append(name)
+    return result
+
+
 _MOP_INTENSITY_TO_WATER_LEVEL = {
     "Quiet": "Low",
     "Automatic": "Medium",
@@ -248,7 +273,8 @@ class SceneSelectEntity(CoordinatorEntity[EufyCleanCoordinator], SelectEntity):
     @property
     def options(self) -> list[str]:
         """Return available scenes."""
-        return [s["name"] for s in self.coordinator.data.scenes if "name" in s]
+        names = [s["name"] for s in self.coordinator.data.scenes if "name" in s]
+        return _deduplicate_names(names)
 
     @property
     def current_option(self) -> str | None:
@@ -272,17 +298,19 @@ class SceneSelectEntity(CoordinatorEntity[EufyCleanCoordinator], SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Trigger the selected scene."""
-        scenes = self.coordinator.data.scenes
-        # Find scene ID by matching the string
-        scene = next(
-            (s for s in scenes if s.get("name") == option),
-            None,
-        )
-        if not scene:
+        # Match by index in the deduplicated options list to handle duplicate names
+        try:
+            idx = self.options.index(option)
+        except ValueError:
             _LOGGER.error("Scene '%s' not found", option)
             return
 
-        scene_id = scene["id"]
+        named_scenes = [s for s in self.coordinator.data.scenes if "name" in s]
+        if idx >= len(named_scenes):
+            _LOGGER.error("Scene '%s' index out of range", option)
+            return
+
+        scene_id = named_scenes[idx]["id"]
         _LOGGER.info("Triggering scene '%s' (ID: %s)", option, scene_id)
 
         command = build_command("scene_clean", scene_id=scene_id)
@@ -308,7 +336,8 @@ class RoomSelectEntity(CoordinatorEntity[EufyCleanCoordinator], SelectEntity):
     @property
     def options(self) -> list[str]:
         """Return available rooms."""
-        return [r["name"] for r in self.coordinator.data.rooms if "name" in r]
+        names = [r["name"] for r in self.coordinator.data.rooms if "name" in r]
+        return _deduplicate_names(names)
 
     @property
     def current_option(self) -> str | None:
@@ -317,17 +346,19 @@ class RoomSelectEntity(CoordinatorEntity[EufyCleanCoordinator], SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Trigger cleaning of the selected room."""
-        rooms = self.coordinator.data.rooms
-        # Find room ID by matching the string
-        room = next(
-            (r for r in rooms if r.get("name") == option),
-            None,
-        )
-        if not room:
+        # Match by index in the deduplicated options list to handle duplicate names
+        try:
+            idx = self.options.index(option)
+        except ValueError:
             _LOGGER.error("Room '%s' not found", option)
             return
 
-        room_id = room["id"]
+        named_rooms = [r for r in self.coordinator.data.rooms if "name" in r]
+        if idx >= len(named_rooms):
+            _LOGGER.error("Room '%s' index out of range", option)
+            return
+
+        room_id = named_rooms[idx]["id"]
         # Use discovered map_id if available, otherwise fallback to 1
         map_id = self.coordinator.data.map_id or 1
         _LOGGER.info(
@@ -337,12 +368,7 @@ class RoomSelectEntity(CoordinatorEntity[EufyCleanCoordinator], SelectEntity):
             map_id,
         )
 
-        # Always use CUSTOMIZE mode to apply user preferences from select
-        # entities.  This ensures room cleaning respects the cleaning_mode,
-        # suction_level, and mop_intensity settings the user has configured.
-        command = build_command(
-            "room_clean", room_ids=[room_id], map_id=map_id, mode="CUSTOMIZE"
-        )
+        command = build_command("room_clean", room_ids=[room_id], map_id=map_id)
         await self.coordinator.async_send_command(command)
 
         self.async_write_ha_state()

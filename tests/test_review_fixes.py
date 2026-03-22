@@ -162,7 +162,7 @@ def _mock_clean_param(**kwargs):
         present_fields.add("clean_carpet")
 
     if "smart_mode" in kwargs:
-        mock.smart_mode_sw = kwargs["smart_mode"]
+        mock.smart_mode_sw.value = kwargs["smart_mode"]
         present_fields.add("smart_mode_sw")
 
     mock.HasField.side_effect = lambda f: f in present_fields
@@ -190,7 +190,7 @@ def test_process_cleaning_params_cleaning_mode(mock_decode):
 @patch("custom_components.robovac_mqtt.api.parser.decode")
 def test_process_cleaning_params_fan_speed(mock_decode):
     """Test DPS 154 parsing extracts fan speed with aligned naming."""
-    clean_param = _mock_clean_param(fan_suction=4)  # Should be "Boost IQ"
+    clean_param = _mock_clean_param(fan_suction=4)  # Should be "Boost_IQ"
 
     mock_response = MagicMock()
     mock_response.HasField.side_effect = lambda f: f == "clean_param"
@@ -201,7 +201,7 @@ def test_process_cleaning_params_fan_speed(mock_decode):
     changes: dict = {}
     _process_cleaning_parameters(state, "encoded", changes)
 
-    assert changes["fan_speed"] == "Boost IQ"
+    assert changes["fan_speed"] == "Boost_IQ"
 
 
 @patch("custom_components.robovac_mqtt.api.parser.decode")
