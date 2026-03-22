@@ -266,10 +266,6 @@ def _process_other_dps(
                     changes["rooms"] = map_info.get("rooms", [])
                     _track_field(state, changes, "map_id")
 
-            elif key == DPS_MAP["MAP_STREAM"]:
-                _LOGGER.debug("Received MAP_STREAM (166) - Raw: %s", value)
-                # For now just log it to help diagnose C10 room info
-
             elif key == DPS_MAP["FIND_ROBOT"]:
                 changes["find_robot"] = str(value).lower() == "true"
 
