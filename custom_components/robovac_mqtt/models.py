@@ -90,6 +90,11 @@ class VacuumState:
     # Device settings (from DPS 176 UnisettingResponse)
     wifi_signal: float = -100.0  # AP signal strength in dBm (converted from 0-100%)
     child_lock: bool = False  # Children lock switch
+    dnd_enabled: bool = False  # Do Not Disturb switch
+    dnd_start_hour: int = 22  # Do Not Disturb start hour
+    dnd_start_minute: int = 0  # Do Not Disturb start minute
+    dnd_end_hour: int = 8  # Do Not Disturb end hour
+    dnd_end_minute: int = 0  # Do Not Disturb end minute
 
     # Device network info (from DPS 169, DeviceInfo proto)
     device_mac: str = ""  # Device MAC address

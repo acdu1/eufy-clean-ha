@@ -38,6 +38,7 @@ from ..proto.cloud.multi_maps_pb2 import MultiMapsManageResponse
 from ..proto.cloud.scene_pb2 import SceneResponse
 from ..proto.cloud.station_pb2 import StationResponse
 from ..proto.cloud.stream_pb2 import RoomParams
+from ..proto.cloud.undisturbed_pb2 import UndisturbedResponse
 from ..proto.cloud.unisetting_pb2 import UnisettingResponse
 from ..proto.cloud.universal_data_pb2 import UniversalDataResponse
 from ..proto.cloud.work_status_pb2 import WorkStatus
@@ -457,6 +458,21 @@ def _process_other_dps(
                 if settings.HasField("children_lock"):
                     changes["child_lock"] = settings.children_lock.value
                     _track_field(state, changes, "child_lock")
+
+            elif key == DPS_MAP["UNDISTURBED"]:
+                undisturbed = decode(UndisturbedResponse, value)
+                _LOGGER.debug("Decoded UndisturbedResponse: %s", undisturbed)
+                if undisturbed.HasField("undisturbed"):
+                    changes["dnd_enabled"] = undisturbed.undisturbed.sw.value
+                    if undisturbed.undisturbed.HasField("begin"):
+                        changes["dnd_start_hour"] = undisturbed.undisturbed.begin.hour
+                        changes["dnd_start_minute"] = (
+                            undisturbed.undisturbed.begin.minute
+                        )
+                    if undisturbed.undisturbed.HasField("end"):
+                        changes["dnd_end_hour"] = undisturbed.undisturbed.end.hour
+                        changes["dnd_end_minute"] = undisturbed.undisturbed.end.minute
+                    _track_field(state, changes, "do_not_disturb")
 
             elif key == DPS_ROBOT_TELEMETRY:
                 pos = _parse_robot_telemetry(value)

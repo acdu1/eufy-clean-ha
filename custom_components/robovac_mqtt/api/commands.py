@@ -17,6 +17,7 @@ from ..proto.cloud.consumable_pb2 import ConsumableRequest
 from ..proto.cloud.control_pb2 import ModeCtrlRequest, SelectRoomsClean
 from ..proto.cloud.map_edit_pb2 import MapEditRequest
 from ..proto.cloud.station_pb2 import StationRequest
+from ..proto.cloud.undisturbed_pb2 import UndisturbedRequest
 from ..proto.cloud.unisetting_pb2 import UnisettingRequest
 from ..utils import encode, encode_message
 
@@ -295,6 +296,27 @@ def build_set_child_lock_command(active: bool) -> dict[str, str]:
     return {DPS_MAP["UNSETTING"]: value}
 
 
+def build_set_undisturbed_command(
+    active: bool,
+    begin_hour: int,
+    begin_minute: int,
+    end_hour: int,
+    end_minute: int,
+) -> dict[str, str]:
+    """Build command to update the Do Not Disturb schedule."""
+    value = encode(
+        UndisturbedRequest,
+        {
+            "undisturbed": {
+                "sw": {"value": active},
+                "begin": {"hour": begin_hour, "minute": begin_minute},
+                "end": {"hour": end_hour, "minute": end_minute},
+            }
+        },
+    )
+    return {DPS_MAP["UNDISTURBED"]: value}
+
+
 def build_command(command: str, **kwargs: Any) -> dict[str, Any]:
     """Unified command builder."""
     cmd = command.lower()
@@ -361,5 +383,13 @@ def build_command(command: str, **kwargs: Any) -> dict[str, Any]:
         return build_reset_accessory_command(int(kwargs.get("reset_type", 0)))
     if cmd == "set_child_lock":
         return build_set_child_lock_command(bool(kwargs.get("active", True)))
+    if cmd == "set_do_not_disturb":
+        return build_set_undisturbed_command(
+            bool(kwargs.get("active", True)),
+            int(kwargs.get("begin_hour", 22)),
+            int(kwargs.get("begin_minute", 0)),
+            int(kwargs.get("end_hour", 8)),
+            int(kwargs.get("end_minute", 0)),
+        )
 
     return {}

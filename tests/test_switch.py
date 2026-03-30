@@ -12,6 +12,7 @@ from custom_components.robovac_mqtt.models import VacuumState
 from custom_components.robovac_mqtt.switch import (
     ChildLockSwitchEntity,
     DockSwitchEntity,
+    DoNotDisturbSwitchEntity,
     FindRobotSwitchEntity,
     set_collect_dust,
     set_wash_cfg,
@@ -106,6 +107,35 @@ def test_child_lock_switch_unavailable_without_field(mock_coordinator):
     entity = ChildLockSwitchEntity(mock_coordinator)
 
     assert entity.available is False
+
+
+async def test_do_not_disturb_switch_turn_on_off(hass: HomeAssistant, mock_coordinator):
+    """Test toggling the Do Not Disturb switch."""
+    entry = MockConfigEntry(domain=DOMAIN, data={})
+    entry.add_to_hass(hass)
+
+    mock_coordinator.data.received_fields = {"do_not_disturb"}
+    mock_coordinator.data.dnd_enabled = False
+    mock_coordinator.data.dnd_start_hour = 22
+    mock_coordinator.data.dnd_start_minute = 0
+    mock_coordinator.data.dnd_end_hour = 8
+    mock_coordinator.data.dnd_end_minute = 0
+
+    entity = DoNotDisturbSwitchEntity(mock_coordinator)
+    entity.hass = hass
+
+    assert entity.available is True
+    assert entity.is_on is False
+    assert entity.extra_state_attributes == {
+        "start_time": "22:00",
+        "end_time": "08:00",
+    }
+
+    await entity.async_turn_on()
+    sent_command = mock_coordinator.async_send_command.call_args_list[-1][0][0]
+    assert DPS_MAP["UNDISTURBED"] in sent_command
+    updated_state = mock_coordinator.async_set_updated_data.call_args_list[-1][0][0]
+    assert updated_state.dnd_enabled is True
 
 
 async def test_dock_switches(hass: HomeAssistant, mock_coordinator):

@@ -11,6 +11,7 @@ from custom_components.robovac_mqtt.api.commands import (
     build_set_clean_speed_command,
     build_set_cleaning_intensity_command,
     build_set_cleaning_mode_command,
+    build_set_undisturbed_command,
     build_set_water_level_command,
 )
 from custom_components.robovac_mqtt.api.parser import update_state
@@ -243,3 +244,24 @@ def test_update_state_find_robot():
     dps = {DPS_MAP["FIND_ROBOT"]: "false"}
     new_state, changes = update_state(state, dps)
     assert new_state.find_robot is False
+
+
+def test_build_set_undisturbed_command():
+    """Test building a Do Not Disturb command."""
+    cmd = build_set_undisturbed_command(True, 22, 0, 8, 0)
+    assert DPS_MAP["UNDISTURBED"] in cmd
+
+
+def test_update_state_undisturbed():
+    """Test parsing Do Not Disturb state from DPS 157."""
+    state = VacuumState()
+    dps = {DPS_MAP["UNDISTURBED"]: "EAoAEgwKAggBEgIIFhoCCAg="}
+
+    new_state, changes = update_state(state, dps)
+
+    assert new_state.dnd_enabled is True
+    assert new_state.dnd_start_hour == 22
+    assert new_state.dnd_start_minute == 0
+    assert new_state.dnd_end_hour == 8
+    assert new_state.dnd_end_minute == 0
+    assert "do_not_disturb" in changes["received_fields"]

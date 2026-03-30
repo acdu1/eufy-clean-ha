@@ -522,6 +522,7 @@ DPS_MAP = {
     "MAP_EDIT_REQUEST": "170",
     "MULTI_MAP_MANAGE": "172",
     "MAP_MANAGE": "169",
+    "UNDISTURBED": "157",
 }
 
 # DPS keys that are known but intentionally not parsed.
@@ -539,7 +540,6 @@ KNOWN_UNPROCESSED_DPS: frozenset[str] = frozenset(
         # Unknown DPS keys observed in the wild:
         "150",  # Unknown, value: None
         "151",  # Unknown, value: True
-        "157",  # Unknown protobuf, small config
         "159",  # Unknown, value: True
         "161",  # Unknown, likely volume (value: 80)
         "162",  # Unknown protobuf, timing config
