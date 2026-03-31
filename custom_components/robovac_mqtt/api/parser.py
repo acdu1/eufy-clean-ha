@@ -515,7 +515,11 @@ def _process_other_dps(
                     _track_field(state, changes, "robot_position")
 
             elif key in KNOWN_UNPROCESSED_DPS:
-                pass  # Acknowledged; value already in raw_dps
+                _LOGGER.debug(
+                    "Known unprocessed DPS %s: %s (value stored in raw_dps)",
+                    key,
+                    value,
+                )
 
             else:
                 _LOGGER.debug("Received unhandled DPS %s: %s", key, value)
