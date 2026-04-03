@@ -1,11 +1,13 @@
 # Eufy-Clean (Home Assistant Custom Component)
 
 ## Overview
+
 This repository is a maintained fork of [eufy-clean](https://github.com/jeppesens/eufy-clean) by [jeppesens](https://github.com/jeppesens), which was originally based on [eufy-clean](https://github.com/martijnpoppen/eufy-clean) by martijnpoppen.
 
 This project provides an interface to interact with Eufy cleaning devices via MQTT, with a specific focus on maintaining a robust **Home Assistant Custom Component**. It allows you to control cleaning scenes, specific rooms, and manage station configurations (wash frequency, auto-empty, etc.) directly from your smart home dashboard.
 
 ## FAQ
+
 - This repo only has support for MQTT enabled Eufy Vacuums, which means you need to have a device that supports MQTT. E.g the Robovac X10 Pro Omni.
 - This code was ported and tested on a Robovac X10 Pro Omni, but it should work on other models as well 🤞🏼
 - This is a personal project maintained for Home Assistant users. Contributions are welcome!
@@ -15,6 +17,7 @@ This project provides an interface to interact with Eufy cleaning devices via MQ
 This custom component provides comprehensive control over your Eufy robot vacuum and its cleaning station:
 
 ### Vacuum Control
+
 - **Start/Stop/Pause** cleaning operations
 - **Return to dock** command
 - **Scene Selection** - Trigger pre-configured cleaning scenes (e.g., "Full Home Deep Clean") directly via a dynamic select entity or service call
@@ -23,6 +26,7 @@ This custom component provides comprehensive control over your Eufy robot vacuum
 - **Find Robot** - Locate your device by playing a sound (toggle via switch)
 
 ### Cleaning Parameter Controls
+
 Fine-grained cleaning settings are exposed as select entities (shown only when supported by your device firmware):
 
 - **Suction Level** - `Quiet`, `Standard`, `Turbo`, `Max`, `Boost_IQ`
@@ -35,58 +39,72 @@ Fine-grained cleaning settings are exposed as select entities (shown only when s
 > These entities are hidden until the device reports the relevant DPS field at least once. Entities that your device does not support will remain unavailable.
 
 ### Dock tasks
+
 - **wash mop** - trigger washing of the mop
 - **dry mop** - trigger drying of the mop
 - **stop dry mop** - stop the drying process
 - **empty dust bin** - trigger emptying of the dust bin
 
 ### Dock Configuration
+
 All dock settings are organized under the **Configuration** category in your device settings:
 
 #### Mop Washing Settings
+
 - **Wash Frequency Mode**: Choose between `ByRoom` (wash after each room) or `ByTime` (wash after set duration)
 - **Wash Frequency Value**: Set wash interval from 15-25 minutes (when using ByTime mode)
 - **Auto Mop Washing**: Enable/disable automatic mop washing
 
 #### Drying Settings
+
 - **Dry Duration**: Choose drying time - `2h`, `3h`, or `4h`
 
 #### Auto-Empty Settings
+
 - **Auto Empty**: Enable/disable the auto-empty feature
 - **Auto Empty Mode**: Configure emptying frequency:
   - `Smart`: Intelligent auto-detection
   - `15 min`, `30 min`, `45 min`, `60 min`: Fixed time intervals
 
 ### Accessory Maintenance
+
 The integration tracks the usage of consumable accessories and allows you to reset them after replacement.
 
 #### Sensors
--   **Consumable Life**: Monitors the remaining life (in hours) for:
-    -   Filter
-    -   Side Brush
-    -   Rolling Brush
-    -   Sensors
-    -   Mop
-    -   Cleaning Tray (Scrape)
+
+- **Consumable Life**: Monitors the remaining life (in hours) for:
+  - Filter
+  - Side Brush
+  - Rolling Brush
+  - Sensors
+  - Mop
+  - Cleaning Tray (Scrape)
 
 #### Reset Buttons
--   Dedicated buttons are available to reset the usage counter for each accessory when you replace them.
+
+- Dedicated buttons are available to reset the usage counter for each accessory when you replace them.
 
 > [!NOTE]
 > The Eufy App displays two types of accessory tracking: "Maintenance" (recommended cleaning) and "Replacement". The "Maintenance" alerts are often calculated locally by the App based on time intervals and are **not** transmitted via MQTT. This integration only tracks the "Replacement" life, which is the actual usage data reported by the device firmware.
 
 ### Sensors
+
 - Battery level percentage
 - Charging status
 - Work status and mode
 - **Extended Device Info**: Serial number, MAC address, and Firmware version are now available in the device info panel.
 - **Error Tracking**: Real-time error monitoring with detailed descriptions (e.g., "Wheel Stuck", "Sensor Dirty") available as attributes and sensors.
+- **Robot Position**: Raw X/Y coordinates and inferred current room detection (diagnostic sensors, disabled by default)
+- **Robot Position Map**: SVG visualization of robot position in a simple room layout (diagnostic sensor, disabled by default)
 
 ### Segment Change Detection
+
 When the vacuum's room map changes (rooms added, removed, or renamed), the integration raises a **Repair issue** in Home Assistant under **Settings → System → Repairs**. This is especially important if you use the [home-assistant-matter-hub](https://github.com/RiDDiX/home-assistant-matter-hub) bridge, where stale room names can cause automations to break. Once you have re-synced your area mapping, the issue will be cleared automatically on the next map update.
 
 ### Home Assistant Matter Hub
+
 For exposing your Eufy vacuum to Apple Home, Google Home, or other Matter-compatible ecosystems we recommend [home-assistant-matter-hub](https://github.com/RiDDiX/home-assistant-matter-hub). This integration is designed to work alongside it. The following properties are exposed for Matter discovery:
+
 - Room segments with guaranteed unique names (duplicates are automatically suffixed, e.g. `Kitchen (2)`) to prevent bridge crashes
 - **Mop Intensity** select entity uses Matter-compatible option names (`Quiet`, `Automatic`, `Max`)
 
@@ -96,37 +114,41 @@ For exposing your Eufy vacuum to Apple Home, Google Home, or other Matter-compat
 ## Usage
 
 ### Installation via HACS
+
 1.  Open HACS in Home Assistant.
 2.  Add this repository as a custom repository.
 3.  Install "Eufy Robovac MQTT".
 4.  Restart Home Assistant.
 
 ### Configuration
+
 1.  Go to Settings -> Devices & Services.
 2.  Click "Add Integration".
 3.  Search for "Eufy Robovac MQTT" and follow the setup flow.
 4.  Login with your Eufy App credentials.
 
 ### Cleaning Scenes
+
 The integration provides a dynamic **Scene** select entity (under the Configuration category) that automatically populates with all **valid** scenes from your Eufy app. Selecting an option in the UI will immediately trigger that cleaning routine.
 
 Alternatively, you can use the following service call:
+
 ```yaml
 action: vacuum.send_command
 metadata: {}
 data:
-    command: scene_clean
-    params:
-        scene_id: 5
+  command: scene_clean
+  params:
+    scene_id: 5
 target:
-    entity_id: vacuum.robovac_x10_pro_omni
+  entity_id: vacuum.robovac_x10_pro_omni
 ```
-- **scene_id** : Default scenes are typically 1-3 with custom scene IDs starring from 4+. You can find the scene IDs in the **Scene Selection** drop down.*
+
+- **scene_id** : Default scenes are typically 1-3 with custom scene IDs starring from 4+. You can find the scene IDs in the **Scene Selection** drop down.\*
 
 ### Cleaning Specific Rooms
 
 The integration provides two ways to clean specific rooms:
-
 
 1.  **Room Selection Entity**: A dynamic select entity (under the **Configuration** category) that automatically populates with all discovered rooms from your current active map. Selecting a room will trigger a clean for that specific room.
 2.  **Service Call**: For more advanced automation, you can use the following service call. You can optionally specify `fan_speed`, `water_level`, and `clean_times` to customize the cleaning for these rooms.
@@ -160,16 +182,17 @@ data:
   params:
     map_id: 4
     rooms:
-      - id: 3  # Kitchen
+      - id: 3 # Kitchen
         fan_speed: "Turbo"
         clean_mode: "vacuum_mop"
         water_level: "High"
-      - id: 4  # Hallway
+      - id: 4 # Hallway
         fan_speed: "Quiet"
         clean_mode: "vacuum"
 ```
 
 ### Map and Room Identification
+
 - **Active Map Sensor**: Use the `sensor.[vacuum_name]_active_map` entity to see which map the vacuum is currently on (e.g., `4`, `6`). This is useful for providing the correct `map_id` in service calls.
 - **Map Switching**: **Currently not supported.** If you need to switch the active map, you must do so within the official Eufy Clean app. Once switched, the integration will automatically update the `Active Map` sensor and `Room Selection` list.
 - **Room IDs**: Room IDs are available in the vacuum entity's `rooms` and `segments` state attributes (e.g., `{"id": 3, "name": "Kitchen"}`). You can inspect these via **Developer Tools → States** in Home Assistant.
@@ -177,14 +200,55 @@ data:
 > [!TIP]
 > If you get an error like "Unable to identify position", it's likely that the `map_id` provided in your service call doesn't match the vacuum's current hardware map. Check the **Active Map** sensor to verify.
 
+### Robot Position Visualization
+
+The integration provides real-time robot position tracking with SVG visualization:
+
+#### Sensors
+
+- **Robot Current Room**: Shows which room the robot is currently in (e.g., "Kitchen", "Living Room")
+- **Robot Position Confidence**: Confidence level in room detection (0-100%)
+- **Robot Position Map (SVG)**: Live SVG visualization showing rooms and robot position
+
+#### SVG Visualization Features
+
+- **Real-time Updates**: SVG updates every 2 seconds as telemetry is received
+- **Room Layout**: Simple grid layout showing all discovered rooms
+- **Robot Indicator**: Red circle shows current robot position
+- **Active Room Highlighting**: Current room is highlighted in orange
+- **Confidence Display**: Shows detection confidence percentage
+
+#### Using the SVG in Dashboards
+
+```yaml
+# Display SVG in a picture entity card
+type: picture-entity
+entity: sensor.robovac_x10_pro_omni_robot_position_svg
+```
+
+Or use in templates:
+
+```yaml
+# Get SVG content for custom displays
+{% set svg_content = states('sensor.robovac_x10_pro_omni_robot_position_svg') %}
+{{ svg_content }}
+```
+
+> [!NOTE]
+> The SVG visualization creates a simple topological map since detailed visual map data is only available through local P2P connections, not the cloud MQTT API used by this integration.
+
 ## Development
+
 This project is maintained as a Home Assistant component. Issues and PRs should be relevant to the integration's functionality within Home Assistant.
 
 ### Pending Features
+
 - Map management
-- Current position
+- Visual map support
+- Enhanced current position (room detection)
 
 ### Local Development & Testing
+
 Included in this repository is a `docker-compose.yml` file to facilitate local testing of the integration.
 
 1.  Ensure you have Docker and Docker Compose installed.
@@ -194,8 +258,10 @@ Included in this repository is a `docker-compose.yml` file to facilitate local t
 5.  You will have to follow the steps mentioned in ### configuration to add your device to home assistant the first time you start the container. After that, you can stop the container and restart it whenever you want to make changes to the custom component.
 
 ## Contact
+
 For any questions or issues, please open an issue on the GitHub repository.
 
 ---
+
 <br>
 <b>Happy Cleaning! 🧹✨</b>

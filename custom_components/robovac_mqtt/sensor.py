@@ -281,6 +281,64 @@ async def async_setup_entry(
             )
         )
 
+        # Robot Current Room sensor
+        entities.append(
+            RoboVacSensor(
+                coordinator,
+                "robot_current_room",
+                "Robot Current Room",
+                lambda s: s.robot_current_room or "Unknown",
+                device_class=None,
+                unit=None,
+                state_class=None,
+                icon="mdi:map-marker",
+                category=EntityCategory.DIAGNOSTIC,
+                availability_fn=lambda s: bool(
+                    "robot_position" in s.received_fields and s.robot_current_room
+                ),
+                enabled_default=False,
+            )
+        )
+
+        # Robot Position Confidence sensor
+        entities.append(
+            RoboVacSensor(
+                coordinator,
+                "robot_position_confidence",
+                "Robot Position Confidence",
+                lambda s: s.robot_position_confidence,
+                device_class=None,
+                unit="%",
+                state_class=SensorStateClass.MEASUREMENT,
+                icon="mdi:percent",
+                category=EntityCategory.DIAGNOSTIC,
+                availability_fn=lambda s: bool(
+                    "robot_position" in s.received_fields
+                    and s.robot_position_confidence > 0
+                ),
+                enabled_default=False,
+            )
+        )
+
+        # Robot Position SVG sensor
+        entities.append(
+            RoboVacSensor(
+                coordinator,
+                "robot_position_svg",
+                "Robot Position Map (SVG)",
+                lambda s: s.robot_position_svg,
+                device_class=None,
+                unit=None,
+                state_class=None,
+                icon="mdi:map",
+                category=EntityCategory.DIAGNOSTIC,
+                availability_fn=lambda s: bool(
+                    "robot_position" in s.received_fields and s.robot_position_svg
+                ),
+                enabled_default=False,
+            )
+        )
+
         # Accessory Sensors
         accessories = [
             ("filter_usage", "Filter Remaining", "mdi:air-filter"),

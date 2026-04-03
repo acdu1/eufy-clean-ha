@@ -104,6 +104,9 @@ class VacuumState:
     # Robot telemetry (from DPS 179, no known proto definition)
     robot_position_x: int = 0  # Raw map X coordinate (firmware-internal grid)
     robot_position_y: int = 0  # Raw map Y coordinate (firmware-internal grid)
+    robot_current_room: str = ""  # Inferred current room based on position
+    robot_position_confidence: float = 0.0  # Confidence in room detection (0.0-1.0)
+    robot_position_svg: str = ""  # SVG visualization of robot position
 
     # Raw data for fallback/diagnostics
     raw_dps: dict[str, Any] = field(default_factory=dict)

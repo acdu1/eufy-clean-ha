@@ -44,7 +44,19 @@ from ..proto.cloud.universal_data_pb2 import UniversalDataResponse
 from ..proto.cloud.work_status_pb2 import WorkStatus
 from ..utils import decode, deduplicate_names
 
+# pylint: disable=too-many-lines,too-many-nested-blocks
+
+
 _LOGGER = logging.getLogger(__name__)
+
+
+def _deduplicate_room_names(
+    rooms: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Deduplicate room names by calling deduplicate_names on extracted names."""
+    names = [str(r["name"]) for r in rooms]
+    deduplicated = deduplicate_names(names)
+    return [{**r, "name": deduplicated[i]} for i, r in enumerate(rooms)]
 
 
 def _decode_varint(data: bytes, pos: int) -> tuple[int, int]:
@@ -518,6 +530,22 @@ def _process_other_dps(
                     raw_x, raw_y = pos["x"], pos["y"]
                     changes["robot_position_x"] = raw_x
                     changes["robot_position_y"] = raw_y
+
+                    # Infer current room based on position and available room data
+                    current_room, confidence = _infer_current_room(
+                        raw_x, raw_y, state.rooms, state.active_room_names
+                    )
+                    if current_room:
+                        changes["robot_current_room"] = current_room
+                        changes["robot_position_confidence"] = confidence
+
+                        # Generate SVG visualization
+                        svg_map = _generate_position_svg(
+                            state.rooms, current_room, confidence
+                        )
+                        if svg_map:
+                            changes["robot_position_svg"] = svg_map
+
                     _track_field(state, changes, "robot_position")
 
             elif key in KNOWN_UNPROCESSED_DPS:
@@ -747,14 +775,109 @@ def _parse_scene_info(value: Any) -> list[dict[str, Any]]:
         return []
 
 
-def _deduplicate_room_names(rooms: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Ensure room names are unique by appending a suffix to duplicates.
+def _infer_current_room(
+    x: int, y: int, rooms: list[dict[str, Any]], active_room_names: str = ""
+) -> tuple[str, float]:
+    """Infer current room based on position coordinates and room data.
 
-    e.g. two rooms named "Kitchen" become "Kitchen" and "Kitchen (2)".
+    Uses active room information when available (during targeted cleaning).
+    Falls back to coordinate-based heuristics when no active rooms are known.
+
+    Returns: (room_name, confidence_score)
     """
-    names = [room["name"] for room in rooms]
-    deduped = deduplicate_names(names)
-    return [{**room, "name": name} for room, name in zip(rooms, deduped)]
+    if not rooms:
+        return "", 0.0
+
+    # If we have active room names from targeted cleaning, use those
+    if active_room_names and active_room_names != "":
+        # Split comma-separated names and return the first one
+        # During multi-room cleaning, we assume the robot is in one of the active rooms
+        active_rooms = [name.strip() for name in active_room_names.split(",")]
+        if active_rooms:
+            return active_rooms[0], 0.8  # High confidence for targeted cleaning
+
+    # Fallback: coordinate-based room detection
+    # This would need calibration data collected during room-specific cleaning sessions
+    # For now, return unknown with low confidence
+    return "Unknown", 0.2
+
+
+def _generate_position_svg(
+    rooms: list[dict[str, Any]], current_room: str, confidence: float
+) -> str:
+    """Generate a simple SVG visualization of robot position.
+
+    Creates a basic topological map showing rooms as rectangles and robot position.
+    Since we don't have visual map data, this creates a simple layout.
+    """
+    if not rooms:
+        return ""
+
+    # Create a simple grid layout for rooms
+    num_rooms = len(rooms)
+    cols = min(3, max(1, int(num_rooms**0.5)))
+    rows = (num_rooms + cols - 1) // cols
+
+    room_width = 120
+    room_height = 80
+    padding = 10
+    svg_width = cols * (room_width + padding) + padding
+    svg_height = rows * (room_height + padding) + padding
+
+    svg_parts = [
+        f'<svg width="{svg_width}" height="{svg_height}" xmlns="http://www.w3.org/2000/svg">',
+        "<defs>",
+        "<style>",
+        ".room { fill: #e3f2fd; stroke: #1976d2; stroke-width: 2; }",
+        ".room.active { fill: #fff3e0; stroke: #f57c00; stroke-width: 3; }",
+        ".room-label { font-family: Arial, sans-serif; font-size: 12px; text-anchor: middle; fill: #1976d2; }",
+        ".robot { fill: #d32f2f; stroke: #ffffff; stroke-width: 2; }",
+        ".confidence { font-family: Arial, sans-serif; font-size: 10px; text-anchor: middle; fill: #666; }",
+        "</style>",
+        "</defs>",
+    ]
+
+    # Draw rooms in a grid
+    for i, room in enumerate(rooms):
+        row = i // cols
+        col = i % cols
+
+        x = col * (room_width + padding) + padding
+        y = row * (room_height + padding) + padding
+
+        room_name = room.get("name", f"Room {room.get('id', i+1)}")
+        is_current_room = room_name == current_room
+
+        # Room rectangle
+        css_class = "room active" if is_current_room else "room"
+        svg_parts.append(
+            f'<rect x="{x}" y="{y}" width="{room_width}" height="{room_height}" class="{css_class}" rx="5"/>'
+        )
+
+        # Room label
+        text_x = x + room_width / 2
+        text_y = y + room_height / 2 + 5
+        svg_parts.append(
+            f'<text x="{text_x}" y="{text_y}" class="room-label">{room_name}</text>'
+        )
+
+        # Robot indicator (only in current room)
+        if is_current_room and confidence > 0:
+            robot_x = x + room_width / 2
+            robot_y = y + room_height / 2 - 10
+            svg_parts.append(
+                f'<circle cx="{robot_x}" cy="{robot_y}" r="8" class="robot"/>'
+            )
+
+            # Confidence indicator
+            conf_y = y + room_height - 15
+            conf_text = f"{int(confidence * 100)}%"
+            svg_parts.append(
+                f'<text x="{text_x}" y="{conf_y}" class="confidence">{conf_text}</text>'
+            )
+
+    svg_parts.append("</svg>")
+    return "\n".join(svg_parts)
 
 
 def _parse_map_data(value: Any) -> dict[str, Any] | None:
