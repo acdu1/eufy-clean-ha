@@ -116,14 +116,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
 
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {"coordinators": coordinators}
+    hass.data[DOMAIN][entry.entry_id] = {
+        "coordinators": coordinators,
+        "streaming_manager": (
+            coordinators[0].streaming_manager if coordinators else None
+        ),
+    }
 
     # Register HTTP views for SVG streaming
-    if coordinators:
-        stream_view = RobovacSVGStreamView()
-        stream_view.streaming_manager = coordinators[0].streaming_manager
-        hass.http.register_view(RobovacSVGViewerView)
-        hass.http.register_view(stream_view)
+    # Views will retrieve streaming_manager from hass.data
+    hass.http.register_view(RobovacSVGViewerView)
+    hass.http.register_view(RobovacSVGStreamView)
 
     # Clean up migrated data from config entry (skip for multi-device to avoid
     # deleting data that was intentionally not migrated)

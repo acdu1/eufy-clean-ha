@@ -6,26 +6,16 @@ import asyncio
 import logging
 
 from aiohttp import web
-from homeassistant.components.http import HomeAssistantView
+from homeassistant.helpers.http import HomeAssistantView
+
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class RobovacSVGViewerView(HomeAssistantView):
-    """Serve the SVG viewer HTML."""
-
-    url = "/api/custom_component/robovac_mqtt/viewer"
-    name = "robovac_svg_viewer"
-
-    async def get(self, request: web.Request) -> web.Response:
-        """Serve viewer HTML."""
-        html = await self._get_viewer_html()
-        return web.Response(text=html, content_type="text/html")
-
-    @staticmethod
-    async def _get_viewer_html() -> str:
-        """Get minimal HTML5 viewer for SVG streaming."""
-        return """<!DOCTYPE html>
+async def _get_svg_viewer_html() -> str:
+    """Get minimal HTML5 viewer for SVG streaming."""
+    return """<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
@@ -75,20 +65,38 @@ class RobovacSVGViewerView(HomeAssistantView):
 </html>"""
 
 
+class RobovacSVGViewerView(HomeAssistantView):
+    """Serve the SVG viewer HTML."""
+
+    url = "/api/custom_component/robovac_mqtt/viewer"
+    name = "robovac_svg_viewer"
+    requires_auth = False
+
+    async def get(self, request: web.Request) -> web.Response:
+        """Serve viewer HTML."""
+        html = await _get_svg_viewer_html()
+        return web.Response(text=html, content_type="text/html")
+
+
 class RobovacSVGStreamView(HomeAssistantView):
     """Serve the SVG stream via Server-Sent Events."""
 
     url = "/api/custom_component/robovac_mqtt/stream"
     name = "robovac_svg_stream"
-
-    def __init__(self):
-        """Initialize the stream view."""
-        super().__init__()
-        self.streaming_manager = None
+    requires_auth = False
 
     async def get(self, request: web.Request) -> web.StreamResponse:
         """Serve SVG stream."""
-        if not self.streaming_manager:
+        hass = request.app["hass"]
+        streaming_manager = None
+
+        # Find the first available streaming manager from any config entry
+        for _entry_id, data in hass.data.get(DOMAIN, {}).items():
+            if isinstance(data, dict) and "streaming_manager" in data:
+                streaming_manager = data["streaming_manager"]
+                break
+
+        if not streaming_manager:
             return web.Response(text="No streaming manager available", status=503)
 
         response = web.StreamResponse()
@@ -99,7 +107,7 @@ class RobovacSVGStreamView(HomeAssistantView):
         await response.prepare(request)
 
         try:
-            async for message in self.streaming_manager.server.svg_stream_generator():
+            async for message in streaming_manager.server.svg_stream_generator():
                 await response.write(message.encode())
         except asyncio.CancelledError:
             pass

@@ -66,6 +66,7 @@ disable = [
     "no-else-return",
     "abstract-method",
     "too-many-positional-arguments",
+    "no-self-use",
 ]
 
 [tool.pytest.ini_options]
